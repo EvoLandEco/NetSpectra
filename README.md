@@ -22,15 +22,19 @@ This lets you preserve local detail where you care most, while still retaining a
 For formal definitions and interpretation guides, see:  
 **https://qtj.me/blog-hybrid-corop-farm.html**
 
+Network simulator             |  Higher-order statistics
+:-------------------------:|:-------------------------:
+![Screenshot 1](assets/screenshots/UI-A.png)  |  ![Screenshot 2](assets/screenshots/UI-B.png)
+
 ---
 
 ## What’s included
 
-- `simulator/` — an interactive D3 simulator that generates a 10‑day hybrid network on the NL COROP map and visualizes:
+- An interactive D3 simulator that generates a 10‑day hybrid network on the NL COROP map and visualizes:
   - **TEA / TNA**: temporal edge / node appearance (new / reactivated / persistent / churn)
   - **π‑mass**: stationary random-walk mass on Farms vs Regions (LIC-restricted)
   - **Magnetic Laplacian spectra**: directed spectral signatures (with quality + weighting toggles)
-- `assets/geo/` — COROP boundaries + label points (`nl_corop.geojson`, `nl_corop_labelpoint.geojson`)
+- COROP boundaries + label points (`nl_corop.geojson`, `nl_corop_labelpoint.geojson`)
 
 > If you fork this for a different country: replace the two GeoJSONs and the simulator will still run.
 
