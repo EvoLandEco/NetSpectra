@@ -19,8 +19,7 @@ NetSpectra proposes a **hybrid dynamic graph representation** for livestock move
 
 This lets you preserve local detail where you care most, while still retaining a coherent national “context backbone”.
 
-For formal definitions and interpretation guides, see:  
-**https://qtj.me/blog-hybrid-corop-farm.html**
+For formal definitions and interpretation guides, see **[My Blog Post](https://qtj.me/blog-Hybrid-COROP-Farm.html)**
 
 Network simulator             |  Higher-order statistics
 :-------------------------:|:-------------------------:
