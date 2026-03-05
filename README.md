@@ -105,4 +105,4 @@ NetSpectra’s simulator uses:
 
 ## License
 
-See the repository license file.
+MIT License.
