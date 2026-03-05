@@ -740,9 +740,6 @@
     <header>
       <div class="title">
         <h1>Hybrid COROP–Farm Dynamic Network Simulator</h1>
-        <div class="sub">
-          10-day discrete-time graph · TEA/TNA · π-mass · magnetic Laplacian
-        </div>
       </div>
       <div class="headerRight">
         <div id="simThemeWrap" title="Toggle day/dark mode">
@@ -758,7 +755,7 @@
     <div class="layout">
       <div class="card" id="controls-card">
         <h2>
-          <span>Controls <span class="hint">runs in a Web Worker</span></span>
+          <span>Controls</span>
           <button
             class="btn ghost"
             id="ctrlToggleBtn"
@@ -786,9 +783,9 @@
                   min="5"
                   step="1"
                   type="range"
-                  value="60"
+                  value="30"
                 />
-                <div class="value mono" id="farmCountVal">60</div>
+                <div class="value mono" id="farmCountVal">30</div>
               </div>
             </div>
             <div class="ctrl">
@@ -900,7 +897,7 @@
         <h2>
           <span
             >Network on NL COROP map
-            <span class="hint">hover nodes/edges</span></span
+            </span
           >
           <span class="pill" id="mapBadge">loading…</span>
         </h2>
@@ -928,9 +925,7 @@
           <h2>
             <span
               >π-mass
-              <span class="hint"
-                >stationary mass on Farms vs Regions (LIC)</span
-              ></span
+              </span
             >
             <span class="pill" id="piBadge">—</span>
           </h2>
@@ -940,7 +935,7 @@
           <h2>
             <span
               >Magnetic Laplacian spectrum
-              <span class="hint">heatmap + column/row means</span></span
+              </span
             >
             <span class="pill" id="magBadge">—</span>
           </h2>
@@ -952,9 +947,7 @@
           <h2>
             <span
               >TEA
-              <span class="hint"
-                >persist + reactivated + new; churn below zero</span
-              ></span
+              </span
             >
             <span class="pill" id="teaBadge">—</span>
           </h2>
@@ -964,9 +957,7 @@
           <h2>
             <span
               >TNA
-              <span class="hint"
-                >active nodes: persist/react/new; ceased below zero</span
-              ></span
+              </span
             >
             <span class="pill" id="tnaBadge">—</span>
           </h2>
@@ -2096,7 +2087,7 @@
             .attr("fill", "var(--muted)")
             .attr("font-size", 10)
             .attr("font-weight", 650)
-            .text("mean over days");
+            .text("m. o. days");
 
           const barW = Math.min(180, wMain * 0.34);
           const barH = 10;
@@ -2190,7 +2181,7 @@
           const q = fmt3(+el.qCharge.value);
           setBadge(
             "#magBadge",
-            `K=${state.kEig} · q=${q} · ${el.qualitySelect.value} · ${wm}`,
+            `K=${state.kEig} · q=${q} · ${wm}`,
           );
           setBadge("#runBadge", `${state.focalCode || "—"} · K=${state.kEig}`);
         }
