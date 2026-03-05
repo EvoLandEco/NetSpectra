@@ -4,7 +4,7 @@
 A compact simulator and analysis scaffold for *temporal edge/node appearance*, *random‑walk mass*, and *directed spectral signatures* (magnetic Laplacian).
 
 [![Version](https://img.shields.io/badge/version-v0.10--alpha-3b82f6)](#)
-[![License](https://img.shields.io/github/license/EvoLandEco/netspectra)](https://github.com/EvoLandEco/netspectra)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 [![Last Commit](https://img.shields.io/github/last-commit/EvoLandEco/netspectra)](https://github.com/EvoLandEco/netspectra)
 
 ---
