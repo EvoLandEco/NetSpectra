@@ -6,9 +6,30 @@
     <meta content="width=device-width,initial-scale=1" name="viewport" />
     <title>Hybrid COROP–Farm Dynamic Network Simulator</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <style>
+    <!-- iframe-resizer child setup -->
+    <script>
+      window.iframeResizer = {
+        license: "GPLv3",
+        onReady: function () {
+          const p = window.parentIframe || window.parentIFrame;
+          if (p && typeof p.resize === "function") {
+            try {
+              p.resize();
+            } catch (e) {}
+            setTimeout(() => {
+              try {
+                p.resize();
+              } catch (e) {}
+            }, 450);
+          }
+        },
+      };
+      window.iFrameResizer = window.iframeResizer;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@iframe-resizer/child@5.5.9"></script>
+<style>
       :root {
-        /* Day mode (default) */
+        /* Default day theme. */
         --bg: #f5f7fb;
         --bgGrad1: rgba(2, 132, 199, 0.14);
         --bgGrad2: rgba(16, 185, 129, 0.1);
@@ -58,7 +79,7 @@
         --barOuterBg: rgba(15, 23, 42, 0.06);
         --barOuterBorder: rgba(15, 23, 42, 0.12);
 
-        /* Map + stats palette */
+        /* Map and statistics palette. */
         --mapLand: #eef2f7;
         --coropFill: rgba(15, 23, 42, 0.03);
         --coropStroke: rgba(15, 23, 42, 0.14);
@@ -93,7 +114,7 @@
       }
 
       body[data-theme="dark"] {
-        /* Dark mode (previous default) */
+        /* Dark theme. */
         --bg: #0b0d10;
         --bgGrad1: rgba(110, 231, 255, 0.1);
         --bgGrad2: rgba(94, 234, 212, 0.08);
@@ -309,13 +330,9 @@
       }
 
       /* Layout:
-        - Wide: 3 columns: controls | map | (TEA+TNA stack)
-          Row1: controls + map + TEA/TNA stack
-          Row2: π-mass + magnetic spectra (equal width) spanning controls+map; TEA/TNA continues
-        - Medium: 2 columns: controls | map
-          Row2: π-mass + magnetic spectra (equal width)
-          Row3: TEA + TNA side-by-side (equal width)
-        - Narrow: stack; controls collapse; π-mass above magnetic spectra
+        - Wide: controls | map | TEA/TNA stack.
+        - Medium: controls | map, with TEA and TNA below the stats row.
+        - Narrow: stacked panels with collapsible controls and π-mass above spectra.
       */
       .layout {
         display: grid;
@@ -329,7 +346,7 @@
         margin: 0 auto;
       }
 
-      /* Cards */
+      /* Card containers. */
       .card {
         border: 1px solid var(--stroke);
         border-radius: 14px;
@@ -417,7 +434,7 @@
           "Liberation Mono", "Courier New", monospace;
       }
 
-      /* Controls stack */
+      /* Control stack. */
       .ctrl-stack {
         padding: 10px 10px 12px 10px;
         display: flex;
@@ -518,7 +535,7 @@
         font-weight: 650;
       }
 
-      /* Map overlays */
+      /* Map overlays. */
       .legend {
         position: absolute;
         right: 12px;
@@ -649,7 +666,7 @@
         font-size: 11px;
       }
 
-      /* Narrow layout: move TEA/TNA below stats in a single row (equal width) */
+      /* Medium layout: move TEA and TNA below the stats row. */
       @media (max-width: 1280px) {
         .layout {
           grid-template-columns: 320px 1fr;
@@ -672,7 +689,7 @@
         }
       }
 
-      /* Very narrow: stack panels, and stack π-mass above magnetic spectra */
+      /* Narrow layout: stack panels and place π-mass above spectra. */
       @media (max-width: 860px) {
         .layout {
           grid-template-columns: 1fr;
@@ -702,7 +719,7 @@
         }
       }
 
-      /* Collapsible controls for very narrow view (map stacked below controls) */
+      /* Collapsible controls for narrow screens. */
       #ctrlToggleBtn {
         display: none;
       }
@@ -737,6 +754,7 @@
     </style>
   </head>
   <body>
+    <div id="iframeRoot" data-iframe-size>
     <header>
       <div class="title">
         <h1>Hybrid COROP–Farm Dynamic Network Simulator</h1>
@@ -895,10 +913,7 @@
       </div>
       <div class="card" id="map-panel">
         <h2>
-          <span
-            >Network on NL COROP map
-            </span
-          >
+          <span>Network on NL COROP map </span>
           <span class="pill" id="mapBadge">loading…</span>
         </h2>
         <svg id="mapSvg"></svg>
@@ -923,20 +938,14 @@
       <div id="piMagRow">
         <div class="card" id="pi-card">
           <h2>
-            <span
-              >π-mass
-              </span
-            >
+            <span>π-mass </span>
             <span class="pill" id="piBadge">—</span>
           </h2>
           <svg id="piSvg"></svg>
         </div>
         <div class="card" id="mag-card">
           <h2>
-            <span
-              >Magnetic Laplacian spectrum
-              </span
-            >
+            <span>Magnetic Laplacian spectrum </span>
             <span class="pill" id="magBadge">—</span>
           </h2>
           <svg id="magSvg"></svg>
@@ -945,20 +954,14 @@
       <div id="teaWrap">
         <div class="card" id="tea-card">
           <h2>
-            <span
-              >TEA
-              </span
-            >
+            <span>TEA </span>
             <span class="pill" id="teaBadge">—</span>
           </h2>
           <svg id="teaSvg"></svg>
         </div>
         <div class="card" id="tna-card">
           <h2>
-            <span
-              >TNA
-              </span
-            >
+            <span>TNA </span>
             <span class="pill" id="tnaBadge">—</span>
           </h2>
           <svg id="tnaSvg"></svg>
@@ -1116,11 +1119,11 @@
             state.isNarrow = !!mq.matches;
 
             if (state.isNarrow && !wasNarrow) {
-              // Entering narrow mode: collapse by default (per requirement)
+              // Collapse controls when entering narrow mode.
               state.controlsCollapsed = true;
             }
             if (!state.isNarrow) {
-              // Leaving narrow mode: always show full controls
+              // Restore the full controls panel outside narrow mode.
               state.controlsCollapsed = false;
               document.body.classList.remove("controls-collapsed");
             }
@@ -1249,7 +1252,7 @@
             applyTheme(initialDark);
 
             let tries = 0;
-            const maxTries = 30; // ~7.5s @ 250ms
+            const maxTries = 30; // Retry for about 7.5 seconds at 250 ms intervals.
             const retry = () => {
               if (themeSync.ext) return;
               const ext2 = findExternalDarkmodeToggle();
@@ -1662,7 +1665,7 @@
             .attr("stroke", "var(--dashLine)")
             .attr("stroke-dasharray", "3,3");
 
-          // Legend (persist/react/new + churn)
+          // Legend for persistence, reactivation, novelty, and churn.
           const legW = 150,
             legH = 72;
           const legX = Math.max(6, w - legW - 6);
@@ -1810,7 +1813,7 @@
             .attr("stroke", "var(--dashLine)")
             .attr("stroke-dasharray", "3,3");
 
-          // Legend (F vs R)
+          // Legend for farm and region mass.
           const legW = 116,
             legH = 44;
           const legX = Math.max(6, w - legW - 6);
@@ -1902,9 +1905,21 @@
             .range([0, hMain])
             .padding(0.02);
 
-          const seriesByT = new Map(
-            (magSeries || []).map((r) => [r.t, r.vals || []]),
-          );
+          const rows = Array.isArray(magSeries) ? magSeries : [];
+          const hasZeroBasedT = rows.some((r) => Number(r && r.t) === 0);
+          const hasOneBasedT =
+            !hasZeroBasedT && rows.some((r) => Number(r && r.t) === 1);
+          const tOffset = hasOneBasedT ? 1 : 0;
+
+          const seriesByT = new Map();
+          rows.forEach((r, idx) => {
+            if (!r) return;
+            const rawT = Number(r.t);
+            const t = Number.isFinite(rawT) ? rawT - tOffset : idx;
+            if (t >= 0 && t < T && !seriesByT.has(t)) {
+              seriesByT.set(t, r.vals || []);
+            }
+          });
 
           const cells = [];
           for (let t = 0; t < T; t++) {
@@ -2179,10 +2194,7 @@
           );
 
           const q = fmt3(+el.qCharge.value);
-          setBadge(
-            "#magBadge",
-            `K=${state.kEig} · q=${q} · ${wm}`,
-          );
+          setBadge("#magBadge", `K=${state.kEig} · q=${q} · ${wm}`);
           setBadge("#runBadge", `${state.focalCode || "—"} · K=${state.kEig}`);
         }
 
@@ -2192,8 +2204,8 @@
           requestAnimationFrame(() => {
             state.rerenderPending = false;
             if (!state.corop) return;
-            // While spectra are still building we keep the UI responsive on resize.
-            // Skip only during the very early phase before any new graph is available.
+            // Skip resize rerenders only during the initial worker phase,
+            // before a fresh graph is available to draw.
             if (state.busy && !state.phase1Ready) return;
             renderMap();
             updateAllViews();
@@ -2578,6 +2590,140 @@
               return out;
             }
 
+            function finalizeMagSpectrum(rawVals, n, k){
+              const finite = (rawVals || [])
+                .map(v => Number(v))
+                .filter(v => isFinite(v))
+                .sort((a,b)=>a-b);
+
+              if(!finite.length) return Array(k).fill(NaN);
+
+              // numeric.eig operates on the 2n x 2n real block form, so each
+              // magnetic Laplacian eigenvalue appears twice. Average adjacent
+              // pairs to recover the original n x n Hermitian spectrum.
+              const paired = [];
+              for(let i=0; i+1<finite.length && paired.length<n; i+=2){
+                paired.push(0.5 * (finite[i] + finite[i+1]));
+              }
+
+              let out = paired;
+              if(out.length < Math.min(n, k)){
+                out = finite.slice(0, Math.min(n, finite.length));
+              }
+
+              const res = out.slice(0, Math.min(k, out.length));
+              while(res.length < k) res.push(NaN);
+              return res;
+            }
+
+            function diagonalJitterCopy(M, eps){
+              const n = M.length;
+              const out = M.map(row => row.slice());
+              const base = eps || 1e-10;
+              for(let i=0;i<n;i++){
+                out[i][i] += base * (1 + i / Math.max(1, n - 1));
+              }
+              return out;
+            }
+
+            function jacobiEigenvaluesSymmetric(M, tol, maxSweeps){
+              const n = M.length;
+              if(n === 0) return [];
+              if(n === 1) return [Number(M[0][0])];
+
+              const A = M.map(row => row.slice());
+              const threshold = tol || 1e-9;
+              const sweeps = maxSweeps || 18;
+
+              for(let sweep=0; sweep<sweeps; sweep++){
+                let maxOff = 0;
+
+                for(let p=0; p<n-1; p++){
+                  for(let q=p+1; q<n; q++){
+                    const apq = A[p][q];
+                    const absApq = Math.abs(apq);
+                    if(absApq > maxOff) maxOff = absApq;
+                    if(absApq < threshold) continue;
+
+                    const app = A[p][p];
+                    const aqq = A[q][q];
+                    const tau = (aqq - app) / (2 * apq);
+                    const t = tau === 0
+                      ? 1
+                      : Math.sign(tau) / (Math.abs(tau) + Math.sqrt(1 + tau * tau));
+                    const c = 1 / Math.sqrt(1 + t * t);
+                    const s = t * c;
+
+                    for(let r=0; r<n; r++){
+                      if(r === p || r === q) continue;
+                      const arp = A[r][p];
+                      const arq = A[r][q];
+                      const nrp = c * arp - s * arq;
+                      const nrq = s * arp + c * arq;
+                      A[r][p] = nrp;
+                      A[p][r] = nrp;
+                      A[r][q] = nrq;
+                      A[q][r] = nrq;
+                    }
+
+                    const npp = c*c*app - 2*s*c*apq + s*s*aqq;
+                    const nqq = s*s*app + 2*s*c*apq + c*c*aqq;
+                    A[p][p] = npp;
+                    A[q][q] = nqq;
+                    A[p][q] = 0;
+                    A[q][p] = 0;
+                  }
+                }
+
+                if(maxOff < threshold) break;
+              }
+
+              const vals = [];
+              for(let i=0;i<n;i++) vals.push(Number(A[i][i]));
+              vals.sort((a,b)=>a-b);
+              return vals;
+            }
+
+            function solveMagBlockSpectrum(B, n, k){
+              const minFinite = Math.min(k, Math.max(2, Math.min(n, 4)));
+
+              function good(res){
+                let finite = 0;
+                for(const v of res){
+                  if(isFinite(v)) finite++;
+                }
+                return finite >= minFinite;
+              }
+
+              try{
+                const eig = numeric.eig(B);
+                const res = finalizeMagSpectrum(eig && eig.lambda ? eig.lambda.x : [], n, k);
+                if(good(res)) return res;
+              }catch(err){}
+
+              // Sparse or nearly degenerate graphs can destabilize the
+              // eigensolver. Add a tiny diagonal perturbation as a harmless
+              // numerical fallback.
+              try{
+                const Bj = diagonalJitterCopy(B, 1e-10);
+                const eig = numeric.eig(Bj);
+                const res = finalizeMagSpectrum(eig && eig.lambda ? eig.lambda.x : [], n, k);
+                if(good(res)) return res;
+              }catch(err){}
+
+              try{
+                const vals = jacobiEigenvaluesSymmetric(
+                  diagonalJitterCopy(B, 1e-12),
+                  1e-8,
+                  18,
+                );
+                const res = finalizeMagSpectrum(vals, n, k);
+                if(good(res)) return res;
+              }catch(err){}
+
+              return Array(k).fill(NaN);
+            }
+
             function magneticLaplacianEigenvalues(A, q, k){
               const n = A.length;
 
@@ -2647,31 +2793,7 @@
                 }
               }
 
-              let eig;
-              try{
-                eig = numeric.eig(B);
-              }catch(err){
-                return Array(k).fill(NaN);
-              }
-
-              const vals = eig.lambda.x.slice().map(v => Number(v));
-              vals.sort((a,b)=>a-b);
-
-              const uniq = [];
-              const tol = 1e-6;
-              for(const v of vals){
-                if(!isFinite(v)) continue;
-                if(uniq.length === 0 || Math.abs(v - uniq[uniq.length-1]) > tol){
-                  uniq.push(v);
-                }
-                if(uniq.length >= n) break;
-              }
-
-              const out = uniq.length ? uniq : vals;
-              const kEff = Math.min(k, out.length);
-              const res = out.slice(0, kEff);
-              while(res.length < k) res.push(NaN);
-              return res;
+              return solveMagBlockSpectrum(B, n, k);
             }
 
             function computeMagSpectrum(edgesByDay, nodes, q, k, quality, magStep, useWeights){
@@ -2962,7 +3084,7 @@
               setStatus("Done.");
               setBadge("#mapBadge", "ready");
 
-              scheduleFullRerender(); // ensure final fit after any layout changes mid-run
+              scheduleFullRerender(); // Refit after any layout changes during computation.
               terminateWorker();
               return;
             }
@@ -3181,11 +3303,13 @@
 
         async function loadGeo() {
           setStatus("Loading nl_corop.geojson…");
-          const corop = await fetch("./assets/files/nl_corop.geojson").then((r) => r.json());
-          setStatus("Loading nl_corop_labelpoint.geojson…");
-          const labels = await fetch("./assets/files/nl_corop_labelpoint.geojson").then(
+          const corop = await fetch("./assets/files/nl_corop.geojson").then(
             (r) => r.json(),
           );
+          setStatus("Loading nl_corop_labelpoint.geojson…");
+          const labels = await fetch(
+            "./assets/files/nl_corop_labelpoint.geojson",
+          ).then((r) => r.json());
 
           state.corop = corop;
           state.labels = labels;
@@ -3234,5 +3358,6 @@
           });
       })();
     </script>
+      </div>
   </body>
 </html>
