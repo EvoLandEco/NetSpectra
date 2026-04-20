@@ -109,7 +109,7 @@ The simulator supports:
 - dark-mode sync with a site-level `#darkmode` checkbox (if present).
 
 See the embedding snippet and explanation in:  
-**https://qtj.me/blog-hybrid-corop-farm.html**
+**[https://qtj.me/blog-hybrid-corop-farm.html](https://qtj.me/blog-Hybrid-COROP-Farm.html)**
 
 ---
 
