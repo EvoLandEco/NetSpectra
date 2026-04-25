@@ -369,6 +369,23 @@
         justify-content: space-between;
         gap: 12px;
       }
+      .panelTitle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        flex-wrap: wrap;
+      }
+      .panelAction {
+        width: auto;
+        padding: 6px 10px;
+        border-radius: 10px;
+        box-shadow: none;
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1;
+        flex: 0 0 auto;
+      }
       .card h2 .hint {
         font-size: 11px;
         color: var(--muted);
@@ -913,7 +930,19 @@
       </div>
       <div class="card" id="map-panel">
         <h2>
-          <span>Network on NL COROP map </span>
+          <div class="panelTitle">
+            <button
+              class="btn ghost panelAction"
+              id="mapScreenshotBtn"
+              type="button"
+              title="Download an SVG of the map"
+              aria-label="Download an SVG of the map"
+              disabled
+            >
+              Save SVG
+            </button>
+            <span>Network on NL COROP map </span>
+          </div>
           <span class="pill" id="mapBadge">loading…</span>
         </h2>
         <svg id="mapSvg"></svg>
@@ -1042,6 +1071,9 @@
           daySlider: document.getElementById("daySlider"),
           dayVal: document.getElementById("dayVal"),
           weightMode: document.getElementById("weightMode"),
+          mapSvg: document.getElementById("mapSvg"),
+          mapLegend: document.getElementById("mapLegend"),
+          mapScreenshotBtn: document.getElementById("mapScreenshotBtn"),
 
           statusBox: document.getElementById("statusBox"),
           statusDot: document.getElementById("statusDot"),
@@ -1174,6 +1206,7 @@
           progressPct: 0,
           hoverCancel: false,
           phase1Ready: false,
+          exportingMap: false,
         };
 
         const themeSync = {
@@ -1353,14 +1386,22 @@
                 : COLORS.edgeRR;
         }
 
-        function renderLegend() {
-          const items = [
-            { k: "FF", label: "Farm→Farm", c: COLORS.edgeFF },
-            { k: "FR", label: "Farm→Region", c: COLORS.edgeFR },
-            { k: "RF", label: "Region→Farm", c: COLORS.edgeRF },
-            { k: "RR", label: "Region→Region", c: COLORS.edgeRR },
+        function cssVar(name) {
+          return getComputedStyle(document.body).getPropertyValue(name).trim();
+        }
+
+        function getMapLegendItems() {
+          return [
+            { k: "FF", label: "Farm→Farm", c: cssVar("--edgeFF") },
+            { k: "FR", label: "Farm→Region", c: cssVar("--edgeFR") },
+            { k: "RF", label: "Region→Farm", c: cssVar("--edgeRF") },
+            { k: "RR", label: "Region→Region", c: cssVar("--edgeRR") },
           ];
-          const box = d3.select("#mapLegend");
+        }
+
+        function renderLegend() {
+          const items = getMapLegendItems();
+          const box = d3.select(el.mapLegend);
           box.html("");
           box
             .append("div")
@@ -1378,6 +1419,244 @@
             .style("margin-top", "8px")
             .style("color", "var(--muted)")
             .text("Farms: ●   Regions: ▲");
+        }
+
+        function updateMapScreenshotButton() {
+          if (!el.mapScreenshotBtn) return;
+          const hasMap =
+            !!el.mapSvg &&
+            !!el.mapSvg.querySelector(".root") &&
+            el.mapSvg.clientWidth > 0 &&
+            el.mapSvg.clientHeight > 0;
+          el.mapScreenshotBtn.disabled = !hasMap || state.exportingMap;
+          el.mapScreenshotBtn.textContent = state.exportingMap
+            ? "Saving…"
+            : "Save SVG";
+        }
+
+        function mapExportVars() {
+          const names = [
+            "--mapLand",
+            "--coropFill",
+            "--coropStroke",
+            "--focalFill",
+            "--focalStroke",
+            "--edgeFF",
+            "--edgeFR",
+            "--edgeRF",
+            "--edgeRR",
+            "--nodeFarm",
+            "--nodeRegion",
+            "--marker",
+          ];
+          return names
+            .map((name) => `${name}:${cssVar(name) || "transparent"};`)
+            .join("");
+        }
+
+        function resolveExportValue(value) {
+          if (typeof value !== "string" || value.indexOf("var(") < 0) {
+            return value;
+          }
+          return value.replace(/var\((--[^),\s]+)\)/g, (_, name) => {
+            const resolved = cssVar(name);
+            return resolved || "transparent";
+          });
+        }
+
+        function inlineExportStyles(svgNode) {
+          svgNode.querySelectorAll("*").forEach((node) => {
+            node.getAttributeNames().forEach((name) => {
+              const value = node.getAttribute(name);
+              const resolved = resolveExportValue(value);
+              if (resolved !== value) node.setAttribute(name, resolved);
+            });
+          });
+          svgNode.removeAttribute("style");
+        }
+
+        function exportLegendFontFamily() {
+          return `"CMU Serif", "Computer Modern Serif", "Latin Modern Roman", "Times New Roman", serif`;
+        }
+
+        function makeSvgEl(doc, tag) {
+          return doc.createElementNS("http://www.w3.org/2000/svg", tag);
+        }
+
+        function appendExportLegend(svgNode) {
+          const doc = svgNode.ownerDocument;
+          const root = svgNode.querySelector(".root") || svgNode;
+          const legend = makeSvgEl(doc, "g");
+          const textColor = cssVar("--text") || "#0f172a";
+          const mutedColor = cssVar("--muted") || "#475569";
+          const scale = 1.5;
+          const rowStep = 18 * scale;
+          const rowStart = 10 * scale;
+          const swatchX = 0;
+          const swatchW = 14 * scale;
+          const swatchH = 8 * scale;
+          const textX = 22 * scale;
+
+          legend.setAttribute("class", "export-legend");
+          legend.setAttribute("transform", "translate(16,18)");
+          legend.setAttribute("font-family", exportLegendFontFamily());
+          legend.setAttribute("font-size", String(12 * scale));
+          legend.setAttribute("fill", textColor);
+          legend.setAttribute("pointer-events", "none");
+
+          getMapLegendItems().forEach((item, idx) => {
+            const y = rowStart + idx * rowStep;
+
+            const swatch = makeSvgEl(doc, "rect");
+            swatch.setAttribute("x", String(swatchX));
+            swatch.setAttribute("y", String(y - swatchH / 2));
+            swatch.setAttribute("width", String(swatchW));
+            swatch.setAttribute("height", String(swatchH));
+            swatch.setAttribute("rx", String(swatchH / 2));
+            swatch.setAttribute("ry", String(swatchH / 2));
+            swatch.setAttribute("fill", item.c);
+            swatch.setAttribute(
+              "stroke",
+              cssVar("--pillBorder") || "rgba(15, 23, 42, 0.16)",
+            );
+            swatch.setAttribute("stroke-width", "1");
+            legend.appendChild(swatch);
+
+            const label = makeSvgEl(doc, "text");
+            label.setAttribute("x", String(textX));
+            label.setAttribute("y", String(y));
+            label.setAttribute("font-size", String(12 * scale));
+            label.setAttribute("font-weight", "400");
+            label.setAttribute("dominant-baseline", "middle");
+            label.textContent = item.label;
+            legend.appendChild(label);
+          });
+
+          const farmY =
+            rowStart + getMapLegendItems().length * rowStep + 6 * scale;
+          const farmDot = makeSvgEl(doc, "circle");
+          farmDot.setAttribute("cx", String(4 * scale));
+          farmDot.setAttribute("cy", String(farmY));
+          farmDot.setAttribute("r", String(3.2 * scale));
+          farmDot.setAttribute("fill", cssVar("--nodeFarm") || "#0f172a");
+          legend.appendChild(farmDot);
+
+          const farmLabel = makeSvgEl(doc, "text");
+          farmLabel.setAttribute("x", String(14 * scale));
+          farmLabel.setAttribute("y", String(farmY));
+          farmLabel.setAttribute("font-size", String(12 * scale));
+          farmLabel.setAttribute("font-weight", "400");
+          farmLabel.setAttribute("fill", mutedColor);
+          farmLabel.setAttribute("dominant-baseline", "middle");
+          farmLabel.textContent = "Farm";
+          legend.appendChild(farmLabel);
+
+          const regionY = farmY + rowStep;
+          const regionTri = makeSvgEl(doc, "path");
+          regionTri.setAttribute(
+            "d",
+            `M${4 * scale},${regionY - 4.2 * scale} L${8.2 * scale},${regionY + 3.4 * scale} L${-0.2 * scale},${regionY + 3.4 * scale} Z`,
+          );
+          regionTri.setAttribute("fill", cssVar("--nodeRegion") || "#334155");
+          legend.appendChild(regionTri);
+
+          const regionLabel = makeSvgEl(doc, "text");
+          regionLabel.setAttribute("x", String(14 * scale));
+          regionLabel.setAttribute("y", String(regionY));
+          regionLabel.setAttribute("font-size", String(12 * scale));
+          regionLabel.setAttribute("font-weight", "400");
+          regionLabel.setAttribute("fill", mutedColor);
+          regionLabel.setAttribute("dominant-baseline", "middle");
+          regionLabel.textContent = "Region";
+          legend.appendChild(regionLabel);
+
+          root.appendChild(legend);
+        }
+
+        function buildExportSvg(svgNode, width, height) {
+          const clone = svgNode.cloneNode(true);
+          clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+          clone.setAttribute("width", String(width));
+          clone.setAttribute("height", String(height));
+          clone.setAttribute("viewBox", `0 0 ${width} ${height}`);
+          clone.setAttribute("style", mapExportVars());
+
+          const bg = clone.querySelector(".map-bg");
+          if (bg) bg.remove();
+
+          clone.querySelectorAll(".corop path").forEach((pathNode) => {
+            const strokeWidth = parseFloat(
+              pathNode.getAttribute("stroke-width") || "1",
+            );
+            pathNode.setAttribute("fill", "none");
+            pathNode.setAttribute(
+              "stroke-width",
+              String((isFinite(strokeWidth) ? strokeWidth : 1) * 2.4),
+            );
+            pathNode.setAttribute("stroke-linejoin", "round");
+          });
+
+          const exportFocalColor = "#808adb";
+          clone.querySelectorAll(".corop path.focal-region").forEach((pathNode) => {
+            pathNode.setAttribute("fill", exportFocalColor);
+            pathNode.setAttribute("fill-opacity", "0.12");
+            pathNode.setAttribute("stroke", exportFocalColor);
+            pathNode.setAttribute("stroke-opacity", "1");
+            pathNode.setAttribute("stroke-dasharray", "8 6");
+            pathNode.setAttribute("stroke-linecap", "round");
+          });
+
+          appendExportLegend(clone);
+          inlineExportStyles(clone);
+          return clone;
+        }
+
+        function buildExportSvgBlob(svgNode, width, height) {
+          const clone = buildExportSvg(svgNode, width, height);
+          const markup =
+            `<?xml version="1.0" encoding="UTF-8"?>\n` +
+            new XMLSerializer().serializeToString(clone);
+          return new Blob([markup], {
+            type: "image/svg+xml;charset=utf-8",
+          });
+        }
+
+        function downloadBlob(blob, filename) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function downloadMapScreenshot() {
+          if (
+            state.exportingMap ||
+            !el.mapSvg ||
+            !el.mapSvg.querySelector(".root")
+          ) {
+            return;
+          }
+
+          state.exportingMap = true;
+          updateMapScreenshotButton();
+
+          try {
+            const width = Math.max(1, Math.round(el.mapSvg.clientWidth));
+            const height = Math.max(1, Math.round(el.mapSvg.clientHeight));
+            const blob = buildExportSvgBlob(el.mapSvg, width, height);
+            const fileName = `nl-corop-network-${state.focalCode || "map"}-day-${state.day + 1}.svg`;
+            downloadBlob(blob, fileName);
+          } catch (err) {
+            console.error(err);
+            setStatus("SVG export failed.");
+          } finally {
+            state.exportingMap = false;
+            updateMapScreenshotButton();
+          }
         }
 
         function renderMap() {
@@ -1412,6 +1691,7 @@
             .attr("fill", "var(--marker)");
 
           g.append("rect")
+            .attr("class", "map-bg")
             .attr("x", 0)
             .attr("y", 0)
             .attr("width", w)
@@ -1423,6 +1703,11 @@
             .selectAll("path")
             .data(state.corop.features)
             .join("path")
+            .attr("class", (d) =>
+              String(d.properties.statcode) === String(state.focalCode)
+                ? "focal-region"
+                : "corop-region",
+            )
             .attr("d", path)
             .attr("fill", (d) =>
               String(d.properties.statcode) === String(state.focalCode)
@@ -1547,6 +1832,7 @@
           renderLegend();
           update();
           state._updateMap = update;
+          updateMapScreenshotButton();
         }
 
         function renderStackedBars(svgSel, rows, opts) {
@@ -3246,6 +3532,11 @@
         function wireEvents() {
           el.coropSelect.addEventListener("change", () => regenerate());
           el.regenBtn.addEventListener("click", () => regenerate());
+          if (el.mapScreenshotBtn) {
+            el.mapScreenshotBtn.addEventListener("click", () =>
+              downloadMapScreenshot(),
+            );
+          }
 
           el.daySlider.addEventListener("input", () => {
             state.day = +el.daySlider.value;
@@ -3346,6 +3637,7 @@
         wireEvents();
         installControlsCollapseHandling();
         initThemeSync();
+        updateMapScreenshotButton();
 
         loadGeo()
           .then(() => regenerate())
